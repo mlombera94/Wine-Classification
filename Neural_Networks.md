@@ -1,47 +1,118 @@
----
-title: "Wine Quality Classification using ANN models"
-output: rmarkdown::github_document
----
+Wine Quality Classification using ANN models
+================
 
-# Step 1: Load Libraries and read in the Data 
-```{r, results='hide', warning=FALSE, message=FALSE}
+Step 1: Load Libraries and read in the Data
+===========================================
+
+``` r
 library(ggplot2)
 library(tidyverse)
 library(neuralnet)
 ```
 
-```{r}
+``` r
 white_wine <- read.csv("winequality-white.csv", sep = ";")
 
 red_wine <- read.csv("winequality-red.csv", sep = ";")
 ```
 
-# Step 2: Inspect and prepare the data
-```{r}
-str(white_wine)
+Step 2: Inspect and prepare the data
+====================================
 
+``` r
+str(white_wine)
+```
+
+    ## 'data.frame':    4898 obs. of  12 variables:
+    ##  $ fixed.acidity       : num  7 6.3 8.1 7.2 7.2 8.1 6.2 7 6.3 8.1 ...
+    ##  $ volatile.acidity    : num  0.27 0.3 0.28 0.23 0.23 0.28 0.32 0.27 0.3 0.22 ...
+    ##  $ citric.acid         : num  0.36 0.34 0.4 0.32 0.32 0.4 0.16 0.36 0.34 0.43 ...
+    ##  $ residual.sugar      : num  20.7 1.6 6.9 8.5 8.5 6.9 7 20.7 1.6 1.5 ...
+    ##  $ chlorides           : num  0.045 0.049 0.05 0.058 0.058 0.05 0.045 0.045 0.049 0.044 ...
+    ##  $ free.sulfur.dioxide : num  45 14 30 47 47 30 30 45 14 28 ...
+    ##  $ total.sulfur.dioxide: num  170 132 97 186 186 97 136 170 132 129 ...
+    ##  $ density             : num  1.001 0.994 0.995 0.996 0.996 ...
+    ##  $ pH                  : num  3 3.3 3.26 3.19 3.19 3.26 3.18 3 3.3 3.22 ...
+    ##  $ sulphates           : num  0.45 0.49 0.44 0.4 0.4 0.44 0.47 0.45 0.49 0.45 ...
+    ##  $ alcohol             : num  8.8 9.5 10.1 9.9 9.9 10.1 9.6 8.8 9.5 11 ...
+    ##  $ quality             : int  6 6 6 6 6 6 6 6 6 6 ...
+
+``` r
 str(red_wine)
 ```
 
+    ## 'data.frame':    1599 obs. of  12 variables:
+    ##  $ fixed.acidity       : num  7.4 7.8 7.8 11.2 7.4 7.4 7.9 7.3 7.8 7.5 ...
+    ##  $ volatile.acidity    : num  0.7 0.88 0.76 0.28 0.7 0.66 0.6 0.65 0.58 0.5 ...
+    ##  $ citric.acid         : num  0 0 0.04 0.56 0 0 0.06 0 0.02 0.36 ...
+    ##  $ residual.sugar      : num  1.9 2.6 2.3 1.9 1.9 1.8 1.6 1.2 2 6.1 ...
+    ##  $ chlorides           : num  0.076 0.098 0.092 0.075 0.076 0.075 0.069 0.065 0.073 0.071 ...
+    ##  $ free.sulfur.dioxide : num  11 25 15 17 11 13 15 15 9 17 ...
+    ##  $ total.sulfur.dioxide: num  34 67 54 60 34 40 59 21 18 102 ...
+    ##  $ density             : num  0.998 0.997 0.997 0.998 0.998 ...
+    ##  $ pH                  : num  3.51 3.2 3.26 3.16 3.51 3.51 3.3 3.39 3.36 3.35 ...
+    ##  $ sulphates           : num  0.56 0.68 0.65 0.58 0.56 0.56 0.46 0.47 0.57 0.8 ...
+    ##  $ alcohol             : num  9.4 9.8 9.8 9.8 9.4 9.4 9.4 10 9.5 10.5 ...
+    ##  $ quality             : int  5 5 5 6 5 5 5 7 7 5 ...
+
 ### Combine both red and white wine datasets
-```{r}
+
+``` r
 wine_data <- rbind(white_wine, red_wine)
 ```
 
 ### Summary of the data
-```{r}
+
+``` r
 summary(wine_data)
 ```
 
+    ##  fixed.acidity    volatile.acidity  citric.acid     residual.sugar  
+    ##  Min.   : 3.800   Min.   :0.0800   Min.   :0.0000   Min.   : 0.600  
+    ##  1st Qu.: 6.400   1st Qu.:0.2300   1st Qu.:0.2500   1st Qu.: 1.800  
+    ##  Median : 7.000   Median :0.2900   Median :0.3100   Median : 3.000  
+    ##  Mean   : 7.215   Mean   :0.3397   Mean   :0.3186   Mean   : 5.443  
+    ##  3rd Qu.: 7.700   3rd Qu.:0.4000   3rd Qu.:0.3900   3rd Qu.: 8.100  
+    ##  Max.   :15.900   Max.   :1.5800   Max.   :1.6600   Max.   :65.800  
+    ##    chlorides       free.sulfur.dioxide total.sulfur.dioxide
+    ##  Min.   :0.00900   Min.   :  1.00      Min.   :  6.0       
+    ##  1st Qu.:0.03800   1st Qu.: 17.00      1st Qu.: 77.0       
+    ##  Median :0.04700   Median : 29.00      Median :118.0       
+    ##  Mean   :0.05603   Mean   : 30.53      Mean   :115.7       
+    ##  3rd Qu.:0.06500   3rd Qu.: 41.00      3rd Qu.:156.0       
+    ##  Max.   :0.61100   Max.   :289.00      Max.   :440.0       
+    ##     density             pH          sulphates         alcohol     
+    ##  Min.   :0.9871   Min.   :2.720   Min.   :0.2200   Min.   : 8.00  
+    ##  1st Qu.:0.9923   1st Qu.:3.110   1st Qu.:0.4300   1st Qu.: 9.50  
+    ##  Median :0.9949   Median :3.210   Median :0.5100   Median :10.30  
+    ##  Mean   :0.9947   Mean   :3.219   Mean   :0.5313   Mean   :10.49  
+    ##  3rd Qu.:0.9970   3rd Qu.:3.320   3rd Qu.:0.6000   3rd Qu.:11.30  
+    ##  Max.   :1.0390   Max.   :4.010   Max.   :2.0000   Max.   :14.90  
+    ##     quality     
+    ##  Min.   :3.000  
+    ##  1st Qu.:5.000  
+    ##  Median :6.000  
+    ##  Mean   :5.818  
+    ##  3rd Qu.:6.000  
+    ##  Max.   :9.000
+
 ### Check for NA values
-```{r}
+
+``` r
 anyNA(wine_data)
+```
+
+    ## [1] FALSE
+
+``` r
 # No missing values
 ```
+
 ### There are no missing values in the data
 
-### Normalize the data 
-```{r}
+### Normalize the data
+
+``` r
 # Function to normalize the data
 normalize <- function(x) {
     return((x - min(x)) / (max(x) - min(x)))
@@ -57,12 +128,31 @@ wine_data_norm <- data.frame(lapply(wine_data, normalize))
 
 # Check data to make sure variables were normalized 
 str(wine_data_norm)
+```
 
+    ## 'data.frame':    6497 obs. of  12 variables:
+    ##  $ fixed.acidity       : num  0.264 0.207 0.355 0.281 0.281 ...
+    ##  $ volatile.acidity    : num  0.127 0.147 0.133 0.1 0.1 ...
+    ##  $ citric.acid         : num  0.217 0.205 0.241 0.193 0.193 ...
+    ##  $ residual.sugar      : num  0.3083 0.0153 0.0966 0.1212 0.1212 ...
+    ##  $ chlorides           : num  0.0598 0.0664 0.0681 0.0814 0.0814 ...
+    ##  $ free.sulfur.dioxide : num  0.1528 0.0451 0.1007 0.1597 0.1597 ...
+    ##  $ total.sulfur.dioxide: num  0.378 0.29 0.21 0.415 0.415 ...
+    ##  $ density             : num  0.268 0.133 0.154 0.164 0.164 ...
+    ##  $ pH                  : num  0.217 0.45 0.419 0.364 0.364 ...
+    ##  $ sulphates           : num  0.129 0.152 0.124 0.101 0.101 ...
+    ##  $ alcohol             : num  0.116 0.217 0.304 0.275 0.275 ...
+    ##  $ quality             : num  0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.5 ...
+
+``` r
 unique(wine_data_norm$quality)
 ```
 
+    ## [1] 0.5000000 0.3333333 0.6666667 0.8333333 0.1666667 0.0000000 1.0000000
+
 ### Plot each variable against "quality" in a matrix to visualize the data
-```{r}
+
+``` r
 wine_data %>%
   gather(-quality, key = "variables", value = "value") %>%
   ggplot(aes(x = value, y = quality, color = variables)) +
@@ -71,10 +161,12 @@ wine_data %>%
   scale_fill_brewer(palette = "Set3", 
                     name = "variables") 
 ```
-### Based on the above visualization of the data, there does not appear to be any variable that correlates with quality
+
+![](Neural_Networks_files/figure-markdown_github/unnamed-chunk-8-1.png) \#\#\# Based on the above visualization of the data, there does not appear to be any variable that correlates with quality
 
 ### Split the data into training, validation, and test datasets
-```{r}
+
+``` r
 # Set seed for duplication purposes
 set.seed(123)
 
@@ -94,28 +186,33 @@ validation_norm <- wine_data_norm[ss==2,]
 test_norm <- wine_data_norm[ss==3,]
 ```
 
-# Step 3: Train the nueral net model 
+Step 3: Train the nueral net model
+==================================
 
 ### Begin training the ANN model using a simple multilayer feedforward network with only a single hidden node. By default, the activation function used is logistic
-```{r}
+
+``` r
 set.seed(123)
 
 simple_ann_classifier <- neuralnet(quality ~., data = train_norm)
 ```
 
-### Plot the network topology 
-```{r}
+### Plot the network topology
+
+``` r
 plot(simple_ann_classifier)
 ```
 
 ### Obtain the performance of the model by predicting on the validation dataset
-```{r}
+
+``` r
 # The compute() function works a bit differently from the predict() functions we've used so far. It returns a list with two components: $neurons, which stores the neurons for each layer in the network, and $net.result, which stores the predicted values. 
 simple_ann_results <- compute(simple_ann_classifier, validation_norm[1:11])
 ```
 
 ### Function to convert each predicted value to its respected quality value
-```{r}
+
+``` r
 round_predictions <- function(x) {
   if(x >= 0 & x <= 0.0833334) {
     x = 3
@@ -136,30 +233,38 @@ round_predictions <- function(x) {
 ```
 
 ### Convert and store the predictions
-```{r}
+
+``` r
 # Store the predicted values
 predicted_quality <- sapply(simple_ann_results$net.result, round_predictions)
 ```
 
 ### Obtain the accuracy between predicted and actual quality
-```{r}
+
+``` r
 # Accuracy of the model 
 mean(predicted_quality == validation$quality)
 ```
+
+    ## [1] 0.5198444
+
 ### The simple ANN model results in an accuracy of 52%
 
-### To improve the performance of the neural network, hidden layers can be implemented in the model. The problem with implementing hidden layers occurs when too many hidden layers are used. This is because adding too many hidden layers than the sufficient amount results in overfitting the model to the training data. This in turn results in poor generalization of unseen data and low classification accuracy. Ideally, its useful to begin with adding 5 hidden layers. 
-```{r}
+### To improve the performance of the neural network, hidden layers can be implemented in the model. The problem with implementing hidden layers occurs when too many hidden layers are used. This is because adding too many hidden layers than the sufficient amount results in overfitting the model to the training data. This in turn results in poor generalization of unseen data and low classification accuracy. Ideally, its useful to begin with adding 5 hidden layers.
+
+``` r
 ann_classifier <- neuralnet(quality ~., data = train_norm, hidden = 5)
 ```
 
-### Plot the network topology 
-```{r}
+### Plot the network topology
+
+``` r
 plot(ann_classifier)
 ```
 
 ### Obtain the performance of the model by predicting on the validation dataset
-```{r}
+
+``` r
 # The compute() function works a bit differently from the predict() functions we've used so far. It returns a list with two components: $neurons, which stores the neurons for each layer in the network, and $net.result, which stores the predicted values. 
 ann_results <- compute(ann_classifier, validation_norm[1:11])
 
@@ -167,15 +272,20 @@ ann_results <- compute(ann_classifier, validation_norm[1:11])
 predicted_quality2 <- sapply(ann_results$net.result, round_predictions)
 ```
 
-### Obtain the accuracy of the updated neural net model 
-```{r}
+### Obtain the accuracy of the updated neural net model
+
+``` r
 # Accuracy of the model 
 mean(predicted_quality2 == validation$quality)
 ```
+
+    ## [1] 0.5439689
+
 ### The updated model with 5 five hidden nodes resulted in 54.4%, an increase of 2.4%
 
 ### Aside from adding hidden nodes, different activation functions can be applied. The activation function transforms a neuron's combined input signals into a single output signal to be broadcasted further in the network. By default, the neuralnet package uses the logistic function, however, a variety functions can be used such as the tanh function
-```{r}
+
+``` r
 # ANN model with 3 hidden nodes and a tanh activation function
 tanh_ann_classifier <- neuralnet(quality ~., data = train_norm, hidden = 4, act.fct = "tanh")
 
@@ -183,7 +293,8 @@ plot(tanh_ann_classifier)
 ```
 
 ### Obtain the performance of the model by predicting on the validation dataset
-```{r}
+
+``` r
 # The compute() function works a bit differently from the predict() functions we've used so far. It returns a list with two components: $neurons, which stores the neurons for each layer in the network, and $net.result, which stores the predicted values. 
 tanh_ann_results <- compute(tanh_ann_classifier, validation_norm[1:11])
 
@@ -193,10 +304,14 @@ predicted_quality3 <- sapply(tanh_ann_results$net.result, round_predictions)
 # Accuracy of the model 
 mean(predicted_quality3 == validation$quality)
 ```
-### Using the tanh activation function, the model does not converge with 5 hidden nodes. After reducing the number of nodes to 4, the model converges and results in 53.5% accuracy, a slight decrease of 0.9% from the model with the logistic activation function and 5 hidden layers. 
+
+    ## [1] 0.5307393
+
+### Using the tanh activation function, the model does not converge with 5 hidden nodes. After reducing the number of nodes to 4, the model converges and results in 53.5% accuracy, a slight decrease of 0.9% from the model with the logistic activation function and 5 hidden layers.
 
 ### Custom activation functions can also be created
-```{r}
+
+``` r
 # Custom activation function
 softplus <- function(x) log(1 + exp(x))
 
@@ -207,7 +322,8 @@ plot(softplus_ann_classifier)
 ```
 
 ### Obtain the performance of the model by predicting on the validation dataset
-```{r}
+
+``` r
 # The compute() function works a bit differently from the predict() functions we've used so far. It returns a list with two components: $neurons, which stores the neurons for each layer in the network, and $net.result, which stores the predicted values. 
 softplus_ann_results <- compute(softplus_ann_classifier, validation_norm[1:11])
 
@@ -217,10 +333,14 @@ predicted_quality4 <- sapply(softplus_ann_results$net.result, round_predictions)
 # Accuracy of the model 
 mean(predicted_quality4 == validation$quality)
 ```
-### Using the custom softplus activation function with 4 hidden nodes results in 53.1% accuracy, a decrease of 1.3% from the model with the logistic activation function and 5 hidden layers. 
+
+    ## [1] 0.5307393
+
+### Using the custom softplus activation function with 4 hidden nodes results in 53.1% accuracy, a decrease of 1.3% from the model with the logistic activation function and 5 hidden layers.
 
 ### Custom activation functions can be created
-```{r}
+
+``` r
 # Custom activation function
 arctan <- function(x) atan(x)
 
@@ -231,7 +351,8 @@ plot(arctan_ann_classifier)
 ```
 
 ### Obtain the performance of the model by predicting on the validation dataset
-```{r}
+
+``` r
 # The compute() function works a bit differently from the predict() functions we've used so far. It returns a list with two components: $neurons, which stores the neurons for each layer in the network, and $net.result, which stores the predicted values. 
 arctan_ann_results <- compute(arctan_ann_classifier, validation_norm[1:11])
 
@@ -242,6 +363,4 @@ predicted_quality5 <- sapply(arctan_ann_results$net.result, round_predictions)
 mean(predicted_quality5 == validation$quality)
 ```
 
-
-
-
+    ## [1] 0.5322957
