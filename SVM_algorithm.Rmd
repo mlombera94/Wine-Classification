@@ -1,0 +1,242 @@
+---
+title: "Wine Quality Classification using Support Vector Machine algorithms"
+output: rmarkdown::github_document
+---
+
+# Step 1: Load Libraries and read in the Data 
+```{r, results='hide', warning=FALSE, message=FALSE}
+library(ggplot2)
+library(tidyverse)
+library(kernlab)
+library(e1071)
+```
+
+```{r}
+white_wine <- read.csv("winequality-white.csv", sep = ";")
+
+red_wine <- read.csv("winequality-red.csv", sep = ";")
+```
+
+# Step 2: Inspect and prepare the data
+```{r}
+str(white_wine)
+
+str(red_wine)
+```
+
+### Combine both red and white wine datasets
+```{r}
+wine_data <- rbind(white_wine, red_wine)
+```
+
+### Summary of the data
+```{r}
+summary(wine_data)
+```
+
+### Check for NA values
+```{r}
+anyNA(wine_data)
+# No missing values
+```
+### There are no missing values in the data
+
+### Convert the variable "quality" from an integer to a factor
+```{r}
+wine_data$quality <- factor(wine_data$quality, 
+                            ordered = TRUE) 
+```
+
+### Plot each variable against "quality" in a matrix to visualize the data
+```{r}
+wine_data %>%
+  gather(-quality, key = "variables", value = "value") %>%
+  ggplot(aes(x = value, y = quality, color = variables)) +
+  geom_point(alpha = 1/4) +
+  facet_wrap(~ variables, scales = "free") + 
+  scale_fill_brewer(palette = "Set3", 
+                    name = "variables") 
+```
+### Based on the above visualization of the data, there does not appear to be any variable that correlates with quality
+
+### Split the data into training, validation, and test datasets
+```{r}
+# Set seed for duplication purposes
+set.seed(123)
+
+# Randomly sample and split the data
+ss <- sample(1:3, 
+             size=nrow(wine_data), 
+             replace=TRUE, 
+             prob=c(0.6,0.2,0.2))
+
+train <- wine_data[ss==1,]
+validation <- wine_data[ss==2,]
+test <- wine_data[ss==3,]
+```
+
+# Step 3: Train the Support Vector Machine algorithm 
+
+### Start with a simple linear SVM 
+```{r}
+# Begin training with a simple linear SVM
+quality_classifier <- ksvm(quality ~., 
+                           data = train,
+                           kernel = "vanilladot")
+
+print(quality_classifier)
+```
+
+### Using the trained simple linear SVM model, apply the model to the validation dataset to check the accuracy of the model
+```{r}
+# Validation set predictions
+pred_validation <-predict(quality_classifier, validation)
+
+# Convert the prediction to factor with the same level as the dataset to obtain the accuracy of the model
+pred_validation <- factor(pred_validation, 
+                          ordered = TRUE, 
+                          levels = c("3", "4", "5", "6", "7", "8", "9"))
+
+# Accuracy of the model 
+mean(pred_validation == validation$quality)
+```
+### The simple linear SVM results in 52.5% accuracy 
+
+# Step 4: Improve upon the model by implementing different kernels and fine-tuning the parameters 
+
+### Because the data consists of multiple variables, a simple linear SVM may not result in the most accurate model. To try and improve the model, an RBF kernel with default parameters should be attempted. 
+```{r}
+# RBF kernel SVM with default parameters 
+RBF_classifier <- svm(quality ~ ., 
+                           data = train,
+                           method = "C-classification", 
+                           kernel = "radial")
+
+print(RBF_classifier)
+```
+
+### Print out the parameters of cost and gamma from the updated algorithm 
+```{r}
+RBF_classifier$cost
+
+RBF_classifier$gamma
+```
+
+### Apply the SVM model to the validation dataset to check the accuracy of the model
+```{r}
+# Validation set predictions
+pred_validation <-predict(RBF_classifier, validation)
+
+# Convert the prediction to factor with the same level as the dataset to obtain the accuracy of the model
+pred_validation <- factor(pred_validation, 
+                          ordered = TRUE, 
+                          levels = c("3", "4", "5", "6", "7", "8", "9"))
+
+# Accuracy of the model 
+mean(pred_validation == validation$quality)
+```
+### The RBF SVM model with default parameters results in 53.4% accuracy, a small increase of .9% from the simple linear SVM 
+
+### Find the optimal parameters of the RBF kernel to tune the model by using the tune.svm function 
+```{r}
+typeColNum <- grep("quality", names(wine_data))
+
+RBF_tune <- tune.svm(x = train[, -typeColNum],
+                     y = train[, typeColNum],
+                     gamma = c(0.1, 0.5, 1, 2, 3, 4),
+                     cost = c(0.01, 0.1, 1, 10, 100, 1000),
+                     kernel = "radial") 
+
+# Print out the parameters of cost and gamma from the updated algorithm 
+RBF_tune$best.parameters$cost
+
+RBF_tune$best.parameters$gamma
+```
+
+### Using the updated parameters for cost and gamma obtained from the tune.svm function, train the SVM model on the train dataset
+```{r}
+tuned_RBF_classifier <- svm(quality ~ ., 
+                            data = train, 
+                            method = "C-classification", 
+                            kernel = "radial",
+                            cost = RBF_tune$best.parameters$cost,
+                            gamma = RBF_tune$best.parameters$gamma)
+```
+
+### Apply the SVM model to the validation dataset to check the accuracy of the model
+```{r}
+# validation set predictions
+pred_validation <-predict(tuned_RBF_classifier, validation)
+
+pred_validation <- factor(pred_validation, 
+                          ordered = TRUE, 
+                          levels = c("3", "4", "5", "6", "7", "8", "9"))
+
+# Accuracy of the model 
+mean(pred_validation == validation$quality)
+```
+### The RBF SVM model with optimized parameters results in 61.5% accuracy, an increase of 8.1% from the default RBF SVM model  
+
+### The accuracy of the SVM algorithm with tuned parameters increased by 8%, however, it is worth applying other kernels such as polynomial and sigmoid
+```{r}
+# Obtain the best parameters for polynomial type kernel for the SVM model
+polynomial_tune <- tune.svm(x = train[, -typeColNum],
+                            y = train[, typeColNum],
+                            coef0 = c(0.1, 0.5, 1, 2, 3, 4),
+                            degree = c(2, 3, 4, 5),
+                            kernel = "polynomial") 
+
+# Using the updated parameters for coef0 and degree obtained from the tune.svm function, train the SVM model on the train dataset
+tuned_polynomial_classifier <- svm(quality ~ ., 
+                                  data = train,
+                                  method = "C-classification", 
+                                  kernel = "polynomial",
+                                  coef0 = polynomial_tune$best.parameters$coef0,
+                                  degree = polynomial_tune$best.parameters$degree)
+
+# Validation set predictions
+pred_validation <-predict(tuned_polynomial_classifier, validation)
+
+# Convert the prediction to factor with the same level as the dataset to obtain the accuracy of the model 
+pred_validation <- factor(pred_validation, 
+                          ordered = TRUE, 
+                          levels = c("3", "4", "5", "6", "7", "8", "9"))
+
+# Accuracy of the model 
+mean(pred_validation == validation$quality)
+```
+### The polynomial SVM model with optimized parameters results in 54.7% accuracy, a decrease of 6.8% from the optimized RBF SVM model 
+
+### Try the SVM algorithm with the sigmoid kernel 
+```{r}
+# Obtain the best parameters for polynomial type kernel for the SVM model
+sigmoid_tune <- tune.svm(x = train[, -typeColNum],
+                         y = train[, typeColNum],
+                         gamma = c(0.1, 0.5, 1, 2, 3, 4),
+                         coef0 = c(0.1, 0.5, 1, 2, 3, 4),
+                         kernel = "sigmoid") 
+
+# Using the updated parameters for cost, gamma, coef0, and degree obtained from the tune.svm function, train the SVM model on the train dataset
+tuned_sigmoid_classifier <- svm(quality ~ ., 
+                                data = train,
+                                method = "C-classification", 
+                                kernel = "sigmoid",
+                                gamma = sigmoid_tune$best.parameters$gamma,
+                                coef0 = sigmoid_tune$best.parameters$coef0)
+
+# Validation set predictions
+pred_validation <-predict(tuned_sigmoid_classifier, validation)
+
+# Convert the prediction to factor with the same level as the dataset to obtain the accuracy of the model 
+pred_validation <- factor(pred_validation, 
+                          ordered = TRUE, 
+                          levels = c("3", "4", "5", "6", "7", "8", "9"))
+
+# Accuracy of the model 
+mean(pred_validation == validation$quality)
+```
+### The sigmoid SVM model with optimized parameters results in 43.8% accuracy, a decrease of 17.7% from the optimized RBF SVM model. 
+
+### Out of the three optimized models, the RBF model resulted in the highest accuracy at 61.5%
+
+

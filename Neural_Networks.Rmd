@@ -1,0 +1,242 @@
+---
+title: "Wine Quality Classification using ANN models"
+output: rmarkdown::github_document
+---
+
+# Step 1: Load Libraries and read in the Data 
+```{r, results='hide', warning=FALSE, message=FALSE}
+library(ggplot2)
+library(tidyverse)
+library(neuralnet)
+```
+
+```{r}
+white_wine <- read.csv("winequality-white.csv", sep = ";")
+
+red_wine <- read.csv("winequality-red.csv", sep = ";")
+```
+
+# Step 2: Inspect and prepare the data
+```{r}
+str(white_wine)
+
+str(red_wine)
+```
+
+### Combine both red and white wine datasets
+```{r}
+wine_data <- rbind(white_wine, red_wine)
+```
+
+### Summary of the data
+```{r}
+summary(wine_data)
+```
+
+### Check for NA values
+```{r}
+anyNA(wine_data)
+# No missing values
+```
+### There are no missing values in the data
+
+### Normalize the data 
+```{r}
+# Function to normalize the data
+normalize <- function(x) {
+    return((x - min(x)) / (max(x) - min(x)))
+}
+
+# Remove rownames from the dataframe
+row.names(wine_data) <- c()
+
+# # Normalize all variables except quality
+# wine_data_norm <- data.frame(lapply(wine_data[1:11], normalize), wine_data[12])
+
+wine_data_norm <- data.frame(lapply(wine_data, normalize))
+
+# Check data to make sure variables were normalized 
+str(wine_data_norm)
+
+unique(wine_data_norm$quality)
+```
+
+### Plot each variable against "quality" in a matrix to visualize the data
+```{r}
+wine_data %>%
+  gather(-quality, key = "variables", value = "value") %>%
+  ggplot(aes(x = value, y = quality, color = variables)) +
+  geom_point(alpha = 1/4) +
+  facet_wrap(~ variables, scales = "free") + 
+  scale_fill_brewer(palette = "Set3", 
+                    name = "variables") 
+```
+### Based on the above visualization of the data, there does not appear to be any variable that correlates with quality
+
+### Split the data into training, validation, and test datasets
+```{r}
+# Set seed for duplication purposes
+set.seed(123)
+
+# Randomly sample and split the data
+ss <- sample(1:3, 
+             size=nrow(wine_data_norm), 
+             replace=TRUE, 
+             prob=c(0.6,0.2,0.2))
+
+train_norm <- wine_data_norm[ss==1,] 
+validation_norm <- wine_data_norm[ss==2,]
+test_norm <- wine_data_norm[ss==3,]
+```
+
+# Step 3: Train the nueral net model 
+
+### Begin training the ANN model using a simple multilayer feedforward network with only a single hidden node. By default, the activation function used is logistic
+```{r}
+set.seed(123)
+
+simple_ann_classifier <- neuralnet(quality ~., data = train_norm)
+```
+
+### Plot the network topology 
+```{r}
+plot(simple_ann_classifier)
+```
+
+### Obtain the performance of the model by predicting on the validation dataset
+```{r}
+# The compute() function works a bit differently from the predict() functions we've used so far. It returns a list with two components: $neurons, which stores the neurons for each layer in the network, and $net.result, which stores the predicted values. 
+simple_ann_results <- compute(simple_ann_classifier, validation_norm[1:11])
+```
+
+### Function to convert each predicted value to its respected quality value
+```{r}
+round_predictions <- function(x) {
+  if(x >= 0 & x <= 0.0833334) {
+    x = 3
+  } else if (x > 0.0833334 & x <= 0.25) {
+    x = 4
+  } else if (x > 0.25 & x <= 0.4166667) {
+    x = 5
+  } else if (x > 0.4166667 & x <= 0.5833334) {
+    x = 6
+  } else if (x > 0.5833334 & x <= 0.75) {
+    x = 7
+  } else if (x > 0.75 & x <= 0.9166667) {
+    x = 8
+  } else if (x > 0.9166667 & x <= 1.0) {
+    x = 9
+  }
+}
+```
+
+### Convert and store the predictions
+```{r}
+# Store the predicted values
+predicted_quality <- sapply(simple_ann_results$net.result, round_predictions)
+```
+
+### Obtain the accuracy between predicted and actual quality
+```{r}
+# Accuracy of the model 
+mean(predicted_quality == validation$quality)
+```
+### The simple ANN model results in an accuracy of 52%
+
+### To improve the performance of the neural network, hidden layers can be implemented in the model. The problem with implementing hidden layers occurs when too many hidden layers are used. This is because adding too many hidden layers than the sufficient amount results in overfitting the model to the training data. This in turn results in poor generalization of unseen data and low classification accuracy. Ideally, its useful to begin with adding 5 hidden layers. 
+```{r}
+ann_classifier <- neuralnet(quality ~., data = train_norm, hidden = 5)
+```
+
+### Plot the network topology 
+```{r}
+plot(ann_classifier)
+```
+
+### Obtain the performance of the model by predicting on the validation dataset
+```{r}
+# The compute() function works a bit differently from the predict() functions we've used so far. It returns a list with two components: $neurons, which stores the neurons for each layer in the network, and $net.result, which stores the predicted values. 
+ann_results <- compute(ann_classifier, validation_norm[1:11])
+
+# Store the predicted values
+predicted_quality2 <- sapply(ann_results$net.result, round_predictions)
+```
+
+### Obtain the accuracy of the updated neural net model 
+```{r}
+# Accuracy of the model 
+mean(predicted_quality2 == validation$quality)
+```
+### The updated model with 5 five hidden nodes resulted in 54.4%, an increase of 2.4%
+
+### Aside from adding hidden nodes, different activation functions can be applied. The activation function transforms a neuron's combined input signals into a single output signal to be broadcasted further in the network. By default, the neuralnet package uses the logistic function, however, a variety functions can be used such as the tanh function
+```{r}
+# ANN model with 3 hidden nodes and a tanh activation function
+tanh_ann_classifier <- neuralnet(quality ~., data = train_norm, hidden = 4, act.fct = "tanh")
+
+plot(tanh_ann_classifier)
+```
+
+### Obtain the performance of the model by predicting on the validation dataset
+```{r}
+# The compute() function works a bit differently from the predict() functions we've used so far. It returns a list with two components: $neurons, which stores the neurons for each layer in the network, and $net.result, which stores the predicted values. 
+tanh_ann_results <- compute(tanh_ann_classifier, validation_norm[1:11])
+
+# Store the predicted values
+predicted_quality3 <- sapply(tanh_ann_results$net.result, round_predictions)
+
+# Accuracy of the model 
+mean(predicted_quality3 == validation$quality)
+```
+### Using the tanh activation function, the model does not converge with 5 hidden nodes. After reducing the number of nodes to 4, the model converges and results in 53.5% accuracy, a slight decrease of 0.9% from the model with the logistic activation function and 5 hidden layers. 
+
+### Custom activation functions can also be created
+```{r}
+# Custom activation function
+softplus <- function(x) log(1 + exp(x))
+
+# ANN model with 5 hidden nodes and a softplus activation function
+softplus_ann_classifier <- neuralnet(quality ~., data = train_norm, hidden = 4, act.fct = softplus)
+
+plot(softplus_ann_classifier)
+```
+
+### Obtain the performance of the model by predicting on the validation dataset
+```{r}
+# The compute() function works a bit differently from the predict() functions we've used so far. It returns a list with two components: $neurons, which stores the neurons for each layer in the network, and $net.result, which stores the predicted values. 
+softplus_ann_results <- compute(softplus_ann_classifier, validation_norm[1:11])
+
+# Store the predicted values
+predicted_quality4 <- sapply(softplus_ann_results$net.result, round_predictions)
+
+# Accuracy of the model 
+mean(predicted_quality4 == validation$quality)
+```
+### Using the custom softplus activation function with 4 hidden nodes results in 53.1% accuracy, a decrease of 1.3% from the model with the logistic activation function and 5 hidden layers. 
+
+### Custom activation functions can be created
+```{r}
+# Custom activation function
+arctan <- function(x) atan(x)
+
+# ANN model with 5 hidden nodes and a softplus activation function
+arctan_ann_classifier <- neuralnet(quality ~., data = train_norm, hidden = 3, act.fct = arctan)
+
+plot(arctan_ann_classifier)
+```
+
+### Obtain the performance of the model by predicting on the validation dataset
+```{r}
+# The compute() function works a bit differently from the predict() functions we've used so far. It returns a list with two components: $neurons, which stores the neurons for each layer in the network, and $net.result, which stores the predicted values. 
+arctan_ann_results <- compute(arctan_ann_classifier, validation_norm[1:11])
+
+# Store the predicted values
+predicted_quality5 <- sapply(arctan_ann_results$net.result, round_predictions)
+
+# Accuracy of the model 
+mean(predicted_quality5 == validation$quality)
+```
+
+
+
+
