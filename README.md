@@ -1,7 +1,6 @@
 # Wine Quality Classification with Support Vector Machines and Neural Networks 
 
 ## Summary
-<<<<<<< HEAD
 This project revolves around quickly deploying support vector machines and neural networks in R to classify the quality of various red and white Portuguese "Vinho Verde" wines on a scale of 1-10 using only the physicochemical properties of the wines. The <a href="https://archive.ics.uci.edu/ml/datasets/Wine+Quality" target="_blank">Wine Dataset</a> includes 6,497 observations with 12 variables in total. In order to train the models, the data is split into three datasets using random sampling methods: Training, Validation, and Testing. Because there are very few observations regarding quality three and nine wines, they are removed from the dataset to avoid introducing unneccessary noise in the data. 
 
 ## Support Vector Machine Results
