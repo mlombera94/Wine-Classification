@@ -1,6 +1,7 @@
 # Wine Quality Classification with Support Vector Machines and Neural Networks 
 
 ## Summary
+<<<<<<< HEAD
 This project revolves around quickly deploying support vector machines and neural networks in R to classify the quality of various red and white Portuguese "Vinho Verde" wines on a scale of 1-10 using only the physicochemical properties of the wines. The <a href="https://archive.ics.uci.edu/ml/datasets/Wine+Quality" target="_blank">Wine Dataset</a> includes 6,497 observations with 12 variables in total. In order to train the models, the data is split into three datasets using random sampling methods: Training, Validation, and Testing. Because there are very few observations regarding quality three and nine wines, they are removed from the dataset to avoid introducing unneccessary noise in the data. 
 
 ## Support Vector Machine Results
@@ -11,4 +12,5 @@ The <a href="https://github.com/mlombera94/Wine-Classification/blob/master/Neura
 
 ## Conclusion
 It is evident that both models performed poorly once applied to the test dataset. Although the best support vector machine outperformed the best neural network model by 8.4%, it is clear there is room for improvement on either the model side or the data side. However, based on prior experience working with classification datasets, the problem appears to stem with the data either being too noisy, non-informative, or a combination of both. It is more likely that the physiochemical properties of the various wines provide no insight into the quality of the wine. Another problem that arises with the dataset is there is no clear scientific methodology for classifying and rating the qualities of the wines. This information is crucial as there is no way to verify the reasons behind each rating and whether the reasons remain consistent with each wine. Moving forward with this project would require more information on how the rating system works and possibly introducing further data such as the what grapes were used, the age of the wine, and how the wine was distilled and stored. 
+
 

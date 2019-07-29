@@ -658,4 +658,8 @@ ggplot(data = confusion_matrix,
 
 ![](Neural_Networks_files/figure-markdown_github/unnamed-chunk-34-1.png)
 
+<<<<<<< HEAD
 #### The model acheives a classification rate of 52.3%. Upon examining the visualization of the confusion matrix, it is clear that model struggled at classifying of five qualities of wines with the highest classification accuracy rate of 68.2% for quality six wines. The model struggles to classify all other qualities of wine with all others having an accuracy rate below 63%. As mentioned before, this could be most likely due to the data being non-informative on top of the fact that most observations are quality six and seven wines
+=======
+#### Upon examining the visualization of the confusion matrix, it is clear that model struggled at classifying of five qualities of wines with the highest classification accuracy rate of 68.2% for quality six wines. The model struggles to classify all other qualities of wine with all others having an accuracy rate below 63%. As mentioned before, this could be most likely due to the data being non-informative on top of the fact that most observations are quality six and seven wines
+>>>>>>> 0f1ff9d0454b259bba6472783f9fda750bc99e6e
